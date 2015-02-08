@@ -70,13 +70,13 @@ void cameraMain(void);
 
 //------------------------------------------------------------------------------
 //  JNI Interface
-//------------------------------------------------------------------------------ 
+//------------------------------------------------------------------------------
+JNIEXPORT void JNICALL
+    Java_com_acanadianengineer_imageprocessing_CameraLib_initCamera (JNIEnv * env, jobject obj);
 JNIEXPORT void JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_initCamera (JNIEnv * env, jobject obj);
+    Java_com_acanadianengineer_imageprocessing_CameraLib_cameraMain (JNIEnv * env, jobject obj);
 JNIEXPORT void JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_cameraMain (JNIEnv * env, jobject obj);
-JNIEXPORT void JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_closeCamera (JNIEnv * env, jobject obj);
+    Java_com_acanadianengineer_imageprocessing_CameraLib_closeCamera (JNIEnv * env, jobject obj);
 
 #ifdef __cplusplus
 }

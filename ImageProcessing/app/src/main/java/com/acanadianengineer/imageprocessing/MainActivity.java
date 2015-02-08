@@ -38,10 +38,9 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class MainActivity extends ActionBarActivity {
     static AssetManager sAssetManager;
-    CameraView         mView;
     CameraLib          mLib;
 
-    private static final String TAG  = "USBFastDemo";
+    private static final String TAG  = "ImageProcessing";
     private Thread captureT = null;
     private Thread drawT = null;
     private Thread renderT = null;
@@ -58,6 +57,8 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate( savedInstanceState );
 		setContentView(R.layout.activity_main);
 
+        Log.d(TAG,"Activity started");
+
         _surface = (SurfaceView) findViewById(R.id.renderingSurface);
 		_holder = _surface.getHolder();
 
@@ -67,7 +68,6 @@ public class MainActivity extends ActionBarActivity {
 
         // init the Native interface
         mLib = new CameraLib();
-        //mLib.initNative();
 
         // Pass the asset manager to the native code
         //sAssetManager = getAssets();
@@ -77,7 +77,6 @@ public class MainActivity extends ActionBarActivity {
         //mView = new USBFastView( getApplication() );
 
         //setContentView( mView );
-
         mLib.initCamera();
         captureT = new Thread(new CaptureThread());
 	    captureT.start();
@@ -124,7 +123,7 @@ public class MainActivity extends ActionBarActivity {
 
 	@Override
 	protected void onDestroy() {
-		Log.d(TAG,"Activity stoppedd");
+		Log.d(TAG,"Activity stopped");
         try {
 	        captureT.join();
   		} catch (InterruptedException e) {

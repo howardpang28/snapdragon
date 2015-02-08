@@ -38,7 +38,7 @@
 #include "capture.h"
 #include "render.h"
 
-#define LOG_TAG    "USBFastDemoJNI"
+#define LOG_TAG    "ImageProcessingJNI"
 #define DEV_NAME   "/dev/video0"
 #define SET_WIDTH   320
 #define SET_HEIGHT  240
@@ -100,6 +100,9 @@ int grabFrame(char* p, int size)
 {
   	pthread_mutex_lock( &mutexGrabFrame );
     if (fbuffers[r_fbuf].start) {
+        // This function will modify the frame buffer as necessary to display modified output image
+        // This function passes both the y-frame and the RGBA interleaved 8888 frame for whatever
+        // processing is necessary.
         processFrame( (char*)(ybuffers[r_fbuf].start), (char*)(fbuffers[r_fbuf].start), (int)width, (int)height, 4);       
         memcpy(p, fbuffers[r_fbuf].start, size);
 
@@ -146,8 +149,8 @@ static void process_image(const void *p)
     }
 
     // Colour space conversion
-    // input:  YUV 4:2:2 YUY2(YUYV) ordering
-    // output: RGBA interleaved, 8888
+    // input:  YUV 4:2:2 YUY2(YUYV) ordering    [retrieved from y-buffer and uv-buffer]
+    // output: RGBA interleaved, 8888           [stored in frame buffer]
     fcvColorYCbCr422PseudoPlanarToRGBA8888u8((uint8_t*)ybuffers[w_fbuf].start, (uint8_t*)uv, width, height, 0, 0, (uint8_t*)fbuffers[w_fbuf].start, 0);
 
     // Circular buffer manipulation
@@ -197,9 +200,6 @@ static int read_frame(void)
 
 void cameraMain(void)
 {
-    // set to use HW units, but doesn't work
-    // fcvSetOperationMode( (fcvOperationMode)FASTCV_OP_PERFORMANCE );
-
     // create the fastcv buffers
     // fbuffer for RGB
     // ybuffer for Y
@@ -517,9 +517,9 @@ void initCamera(int *w, int* h) {
    LOGI(LOG_TAG, "Using FastCV version %s \n", sVersion );
 
    LOGI(LOG_TAG, "Starting JNI FastCV app");
-	strcpy (dev_name, DEV_NAME);
+   strcpy (dev_name, DEV_NAME);
 
-	open_device ();
+    open_device ();
 	init_device ();
 	start_capturing ();
     LOGI(LOG_TAG, "Successful init device"); 
@@ -546,8 +546,9 @@ void closeCamera() {
 // Called upon initialization of the camera
 //------------------------------------------------------------------------------
 JNIEXPORT void JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_initCamera (JNIEnv * env, jobject obj)
+   Java_com_acanadianengineer_imageprocessing_CameraLib_initCamera (JNIEnv * env, jobject obj)
 {
+    LOGW(LOG_TAG, "inside initCamera");
     int w, h;
     initCamera(&w, &h);
 }
@@ -556,8 +557,9 @@ JNIEXPORT void JNICALL
 // Called upon destruction of the camera
 //------------------------------------------------------------------------------
 JNIEXPORT void JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_closeCamera (JNIEnv * env, jobject obj)
+    Java_com_acanadianengineer_imageprocessing_CameraLib_closeCamera (JNIEnv * env, jobject obj)
 {
+    LOGW(LOG_TAG, "inside closeCamera");
     closeCamera();
 }
 
@@ -565,7 +567,8 @@ JNIEXPORT void JNICALL
 // Called by the main function of the Camera Thread
 //------------------------------------------------------------------------------
 JNIEXPORT void JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_cameraMain (JNIEnv * env, jobject obj)
+    Java_com_acanadianengineer_imageprocessing_CameraLib_cameraMain (JNIEnv * env, jobject obj)
 {
+    LOGW(LOG_TAG, "inside cameraMain");
 	cameraMain();
 }

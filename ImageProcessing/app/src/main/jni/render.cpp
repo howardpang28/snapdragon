@@ -24,7 +24,7 @@
 #include "render.h"
 #include "capture.h"
 
-#define LOG_TAG    "USBFastDemoJNI"
+#define LOG_TAG    "ImageProcessingJNI"
 
 // The mutex is needed for the circular buffer used in grab frame
 pthread_mutex_t mutexDirty;
@@ -91,32 +91,11 @@ static int bresenham( Point* points, double x1, double y1, double x2, double y2,
 //------------------------------------------------------------------------------
 //  All of the FCV processing of the frame happens in this function.
 //------------------------------------------------------------------------------
+// Input: y (Y-frame), RGBA (RGBA 8888 interleaved frame), width of frame, height of frame, bytes per pixel
+// Output: The RGBA frame is what is drawn on the screen, so this image will modify the RGBA frame
+// This function can process Y or RGBA frames as necessary, and reflect the changes on the RGBA frame.
 void processFrame( char* y, char* rgba, int width, int height, int bpp)
 {
-    //--------------------------------
-    // Perform hough line detection
-    //--------------------------------
-    /*uint32_t maxLines = 15, numLines;
-    fcvLine detLines[maxLines];
-    fcvHoughLineu8 ( (uint8_t*)y, width, height, 0, 1.0, maxLines, &numLines, detLines);
-
-    int maxPnts = 500, numPnts;
-    Point points[maxPnts];
-    for (unsigned int i = 0; i < numLines; i++) {
-        numPnts = bresenham( points, detLines[i].start.x, detLines[i].start.y, detLines[i].end.x, detLines[i].end.y, maxPnts );
-        //LOGI(LOG_TAG, "numPnts = %i", numPnts);
-        //LOGI(LOG_TAG, "(%i,%i) to (%i,%i)", (int)(detLines[i].start.x),(int)(detLines[i].start.y),
-        //                                    (int)(detLines[i].end.x),  (int)(detLines[i].end.y));
-        for( int j = 0; j < numPnts; j++) {
-        //LOGI(LOG_TAG, "red at (%i,%i)", points[j].x, points[j].y);
-            int pIdx = points[j].x * bpp + points[j].y * width * bpp;
-            //rgba[pIdx] = 255;
-            //rgba[pIdx + 1] = 0;
-            //rgba[pIdx + 2] = 0;
-            //rgba[pIdx + 3] = 255;
-        }
-    }*/
-
     //--------------------------------
     // Perform corner detection
     //--------------------------------
@@ -151,19 +130,33 @@ void processFrame( char* y, char* rgba, int width, int height, int bpp)
 
     uint8_t*  cannyBuf = (uint8_t*)fcvMemAlloc(scaledWidth * scaledHeight, 16);
     fcvFilterCanny3x3u8 ( filteredBuf, scaledWidth, scaledHeight, cannyBuf, 12, 14);
-    write(dump_fd, cannyBuf, scaledWidth * scaledHeight);
+    //write(dump_fd, cannyBuf, scaledWidth * scaledHeight);
 
-    /*for (int j = 0; j < scaledHeight*scaledWidth; j++) {
-        int idx = j*4;  // upscale back
-        if (cannyBuf[j] != 0) {
-            rgba[idx*4] = 0;
-            rgba[idx*4+1] = 0;
-            rgba[idx*4+2] = 0;
-            rgba[idx*4+3] = 255;
-        } else {
-            rgba[idx*4+3] = 0;
+    for (int j = 0; j < scaledHeight * scaledWidth; j++) {
+        int line  = j / scaledWidth;
+        int pixel =  (line * width * bpp) + ((j % scaledWidth) * bpp);  // pixel location
+        rgba[pixel + 0] = 100;
+        rgba[pixel + 1] = 100;
+        rgba[pixel + 2] = 100;
+        rgba[pixel + 3] = cannyBuf[j];
+    }
+
+    //--------------------------------
+    // Perform hough line detection
+    //--------------------------------
+    uint32_t maxLines = 15, numLines;
+    fcvLine detLines[maxLines];
+    fcvHoughLineu8 ( (uint8_t*)cannyBuf, scaledWidth, scaledHeight, scaledWidth, 0.25, maxLines, &numLines, detLines);
+
+    int maxPnts = 500, numPnts;
+    Point points[maxPnts];
+    for (unsigned int i = 0; i < numLines; i++) {
+        numPnts = bresenham( points, detLines[i].start.x, detLines[i].start.y, detLines[i].end.x, detLines[i].end.y, maxPnts );
+        for( int j = 0; j < numPnts; j++) {
+            int pIdx = points[j].x + points[j].y * width;
+            rgba[pIdx*bpp] = 255;
         }
-    }*/
+    }
 
     fcvMemFree (cannyBuf);
     fcvMemFree(scaledBuf);
@@ -175,10 +168,11 @@ void processFrame( char* y, char* rgba, int width, int height, int bpp)
 //  maximum number of points that the points array can handle.
 //------------------------------------------------------------------------------
 JNIEXPORT void JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_drawMain (JNIEnv * env, jobject obj, jobject bitmap)
+    Java_com_acanadianengineer_imageprocessing_CameraLib_drawMain (JNIEnv * env, jobject obj, jobject bitmap)
 {
-   LOGI(LOG_TAG, "inside drawMain"); 
+   LOGI(LOG_TAG, "inside drawMain");
     dump_fd = open("/sdcard/dumpcan.yuv", O_RDWR|O_CREAT, 0777);
+    if (dump_fd < 0) LOGW(LOG_TAG, "failed to open /sdcard/dumpcan.yuv");
 
     AndroidBitmapInfo info;
     AndroidBitmap_getInfo(env,bitmap,&info);
@@ -214,7 +208,7 @@ JNIEXPORT void JNICALL
 //  The screen by invoking Render in Java.
 //------------------------------------------------------------------------------
 JNIEXPORT int JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_isDirty (JNIEnv * env, jobject obj)
+    Java_com_acanadianengineer_imageprocessing_CameraLib_isDirty (JNIEnv * env, jobject obj)
 {
    pthread_mutex_lock( &mutexDirty );
    if (dirty) {

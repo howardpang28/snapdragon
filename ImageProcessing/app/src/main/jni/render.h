@@ -58,9 +58,9 @@ void processFrame( char* y, char* rgba, int width, int height, int bpp);
 //  JNI Interface
 //------------------------------------------------------------------------------ 
 JNIEXPORT void JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_drawMain (JNIEnv * env, jobject obj, jobject bitmap);
+    Java_com_acanadianengineer_imageprocessing_CameraLib_drawMain (JNIEnv * env, jobject obj, jobject bitmap);
 JNIEXPORT int JNICALL 
-    Java_com_example_usbfastdemo_USBFastLib_isDirty (JNIEnv * env, jobject obj);
+    Java_com_acanadianengineer_imageprocessing_CameraLib_isDirty (JNIEnv * env, jobject obj);
 
 #ifdef __cplusplus
 }
